@@ -1,0 +1,1046 @@
+{
+  "meta": {
+    "format": "httpie",
+    "version": "1.0.0",
+    "contentType": "collection",
+    "schema": "https://schema.httpie.io/1.0.0.json",
+    "docs": "https://httpie.io/r/help/export-from-httpie",
+    "source": "HTTPie Desktop 2025.2.0"
+  },
+  "entry": {
+    "name": "Gemini RAG Service",
+    "icon": {
+      "name": "default",
+      "color": "gray"
+    },
+    "auth": {
+      "type": "none"
+    },
+    "requests": [
+      {
+        "name": "Health & Monitoring / Health Check",
+        "url": "https://gemini-rag-service.onrender.com/api/health",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Health & Monitoring / Usage Dashboard",
+        "url": "https://gemini-rag-service.onrender.com/api/usage/dashboard",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Health & Monitoring / Usage Stats",
+        "url": "https://gemini-rag-service.onrender.com/api/usage/stats",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Document Management / Upload Document - Weaviate MD",
+        "url": "http://localhost:5000/api/documents/upload",
+        "method": "POST",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "form",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": true,
+            "fields": [
+              {
+                "name": "file",
+                "value": "",
+                "enabled": true,
+                "type": "file"
+              },
+              {
+                "name": "category",
+                "value": "tutorial",
+                "enabled": true,
+                "type": "text"
+              },
+              {
+                "name": "author",
+                "value": "Weaviate",
+                "enabled": true,
+                "type": "text"
+              },
+              {
+                "name": "tags",
+                "value": "[\"rag\", \"tutorial\", \"weaviate\"]",
+                "enabled": true,
+                "type": "text"
+              }
+            ]
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Document Management / Upload Document - Weaviate PDF",
+        "url": "http://localhost:5000/api/documents/upload",
+        "method": "POST",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "form",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": true,
+            "fields": [
+              {
+                "name": "file",
+                "value": "",
+                "enabled": true,
+                "type": "file"
+              },
+              {
+                "name": "category",
+                "value": "tutorial",
+                "enabled": true,
+                "type": "text"
+              },
+              {
+                "name": "author",
+                "value": "Weaviate",
+                "enabled": true,
+                "type": "text"
+              },
+              {
+                "name": "tags",
+                "value": "[\"rag\", \"advanced\", \"ebook\"]",
+                "enabled": true,
+                "type": "text"
+              }
+            ]
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Document Management / Upload Document - AI Guide MD",
+        "url": "http://localhost:5000/api/documents/upload",
+        "method": "POST",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "form",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": true,
+            "fields": [
+              {
+                "name": "file",
+                "value": "",
+                "enabled": true,
+                "type": "file"
+              },
+              {
+                "name": "category",
+                "value": "guide",
+                "enabled": true,
+                "type": "text"
+              },
+              {
+                "name": "tags",
+                "value": "[\"ai\", \"guide\"]",
+                "enabled": true,
+                "type": "text"
+              }
+            ]
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Document Management / Upload Document - LangChain Guide MD",
+        "url": "http://localhost:5000/api/documents/upload",
+        "method": "POST",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "form",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": true,
+            "fields": [
+              {
+                "name": "file",
+                "value": "",
+                "enabled": true,
+                "type": "file"
+              },
+              {
+                "name": "category",
+                "value": "guide",
+                "enabled": true,
+                "type": "text"
+              },
+              {
+                "name": "tags",
+                "value": "[\"langchain\", \"setup\", \"guide\"]",
+                "enabled": true,
+                "type": "text"
+              }
+            ]
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Document Management / Upload Text Directly",
+        "url": "http://localhost:5000/api/documents/text",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"text\": \"Your text content here...\",\n  \"metadata\": {\n    \"title\": \"My Document\",\n    \"category\": \"notes\"\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Document Management / Get Document Stats",
+        "url": "https://gemini-rag-service.onrender.com/api/documents/stats",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Document Management / Delete Document",
+        "url": "http://localhost:5000/api/documents/{{documentId}}",
+        "method": "DELETE",
+        "headers": [],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Query Endpoints / Standard Query",
+        "url": "https://gemini-rag-service.onrender.com/api/query",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"What is semantic chunking?\",\n  \"options\": {\n    \"topK\": 20,\n    \"useReranking\": true,\n    \"useHybridSearch\": true\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Query Endpoints / Simple Query",
+        "url": " https://gemini-rag-service.onrender.com/api/query/simple",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"What is RAG?\"\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Query Endpoints / Routed Query",
+        "url": "https://gemini-rag-service.onrender.com/api/query/route",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"Compare vector search and keyword search\"\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Query Endpoints / Advanced Query",
+        "url": "https://gemini-rag-service.onrender.com/api/query/advanced",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"Explain what is RAG \",\n  \"metadataFilter\": {\n    \"category\": \"tutorial\",\n    \"tags\": [\"rag\"]\n  },\n  \"options\": {\n    \"topK\": 15,\n    \"rerankTopK\": 3,\n    \"useQueryRewriting\": true,\n    \"useQueryExpansion\": false,\n    \"useHybridSearch\": true,\n    \"hybridAlpha\": 0.6,\n    \"useReranking\": true,\n    \"useContextCompression\": true\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Advanced Retrieval / Parent Document",
+        "url": "https://gemini-rag-service.onrender.com/api/advanced/parent-document",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"What is RAG?\",\n  \"options\": {\n    \"topK\": 20,\n    \"parentTopK\": 3\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Advanced Retrieval / Multi-Query",
+        "url": "https://gemini-rag-service.onrender.com/api/advanced/multi-query",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"Explain hybrid search\",\n  \"options\": {\n    \"numQueries\": 3,\n    \"topK\": 10\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Advanced Retrieval / HyDE",
+        "url": "https://gemini-rag-service.onrender.com/api/advanced/hyde",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"What is semantic chunking?\",\n  \"options\": {\n    \"topK\": 10\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Advanced Retrieval / Ensemble",
+        "url": "https://gemini-rag-service.onrender.com/api/advanced/ensemble",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"Compare chunking strategies\",\n  \"options\": {\n    \"topK\": 10,\n    \"methods\": [\"vector\", \"hybrid\", \"hyde\"],\n    \"weights\": {\n      \"vector\": 0.3,\n      \"hybrid\": 0.5,\n      \"hyde\": 0.2\n    }\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Advanced Retrieval / Self-Query",
+        "url": "https://gemini-rag-service.onrender.com/api/advanced/self-query",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"Show me tutorial documents about chunking from 2024\",\n  \"options\": {\n    \"topK\": 10\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Streaming / Stream Query (SSE)",
+        "url": "https://gemini-rag-service.onrender.com/api/query/stream",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"What is RAG?\",\n  \"options\": {\n    \"topK\": 10,\n    \"useHybridSearch\": true\n  }\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Streaming / Stream Simple",
+        "url": "https://gemini-rag-service.onrender.com/api/stream/simple",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"query\": \"Explain what is RAG\",\n  \"context\": \"RAG techniques\"\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Analytics & Feedback / Query Stats",
+        "url": "https://gemini-rag-service.onrender.com/api/analytics/stats",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [
+          {
+            "name": "timeRange",
+            "value": "24h",
+            "enabled": true
+          }
+        ],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Analytics & Feedback / Popular Queries",
+        "url": "https://gemini-rag-service.onrender.com/api/analytics/popular",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [
+          {
+            "name": "limit",
+            "value": "10",
+            "enabled": true
+          },
+          {
+            "name": "timeRange",
+            "value": "7d",
+            "enabled": true
+          }
+        ],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Analytics & Feedback / Slow Queries",
+        "url": "https://gemini-rag-service.onrender.com/api/analytics/slow",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [
+          {
+            "name": "limit",
+            "value": "10",
+            "enabled": true
+          },
+          {
+            "name": "threshold",
+            "value": "5000",
+            "enabled": true
+          }
+        ],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Analytics & Feedback / Method Performance",
+        "url": "https://gemini-rag-service.onrender.com/api/analytics/methods",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [
+          {
+            "name": "timeRange",
+            "value": "7d",
+            "enabled": true
+          }
+        ],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Analytics & Feedback / Submit Feedback",
+        "url": "https://gemini-rag-service.onrender.com/api/analytics/feedback",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"queryId\": \"query_123\",\n  \"query\": \"What is RAG?\",\n  \"response\": \"RAG stands for...\",\n  \"rating\": 5,\n  \"helpful\": true,\n  \"feedback\": \"Great explanation!\",\n  \"issues\": []\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Analytics & Feedback / Feedback Summary",
+        "url": "https://gemini-rag-service.onrender.com/api/analytics/feedback/summary",
+        "method": "GET",
+        "headers": [],
+        "queryParams": [
+          {
+            "name": "timeRange",
+            "value": "7d",
+            "enabled": true
+          }
+        ],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "none",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "",
+            "format": "application/json"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      },
+      {
+        "name": "Analytics & Feedback / Clear Cache",
+        "url": "https://gemini-rag-service.onrender.com/api/analytics/cache/clear",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Content-Type",
+            "value": "application/json",
+            "enabled": true
+          }
+        ],
+        "queryParams": [],
+        "pathParams": [],
+        "auth": {
+          "type": "inherited"
+        },
+        "body": {
+          "type": "text",
+          "file": {
+            "name": ""
+          },
+          "text": {
+            "value": "{\n  \"pattern\": \"embedding:*\"\n}",
+            "format": "text/plain"
+          },
+          "form": {
+            "isMultipart": false,
+            "fields": []
+          },
+          "graphql": {
+            "query": "",
+            "variables": ""
+          }
+        }
+      }
+    ]
+  }
+}
