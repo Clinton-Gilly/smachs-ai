@@ -12,3 +12,5 @@ tsconfig.tsbuildinfo
 .vscode/
 .idea/
 .claude/
+
+.vercel

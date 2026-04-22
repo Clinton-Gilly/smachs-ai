@@ -45,7 +45,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       category: req.body.category,
       author: req.body.author,
       tags: req.body.tags ? JSON.parse(req.body.tags) : [],
-      description: req.body.description
+      description: req.body.description,
+      userId: req.userId  // scope document to the uploading user
     };
 
     const result = await documentService.processDocument(req.file, metadata);
@@ -161,6 +162,9 @@ router.get('/', async (req, res) => {
       documentIds = col.documentIds || [];
     }
 
+    // Admins see all documents; regular users only see their own
+    const userId = req.user.role === 'admin' ? null : req.userId;
+
     const result = await documentService.listDocuments({
       limit: limit ? parseInt(limit, 10) : 100,
       offset: offset ? parseInt(offset, 10) : 0,
@@ -168,7 +172,8 @@ router.get('/', async (req, res) => {
       category: typeof category === 'string' ? category : '',
       author: typeof author === 'string' ? author : '',
       tag: typeof tag === 'string' ? tag : '',
-      documentIds
+      documentIds,
+      userId
     });
 
     res.json({ success: true, data: result });

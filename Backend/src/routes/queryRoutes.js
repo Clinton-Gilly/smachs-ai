@@ -11,18 +11,20 @@ const logger = require('../utils/logger');
  * retrieval to the collection's documentIds. Mutates & returns the
  * options object for convenience.
  */
-async function applyCollectionScope(options = {}) {
-  if (!options || !options.collectionId) return options;
-  const ids = await collectionsService.resolveDocumentIds(
-    String(options.collectionId)
-  );
-  if (!ids) {
-    throw new Error(`Collection ${options.collectionId} not found`);
-  }
+async function applyCollectionScope(options = {}, userId = null) {
   const merged = { ...(options.metadataFilter || {}) };
-  merged.documentIds = ids; // buildMetadataFilter handles empty as no-match
+
+  // Scope RAG search to the requesting user's documents
+  if (userId) merged.userId = userId;
+
+  if (options && options.collectionId) {
+    const ids = await collectionsService.resolveDocumentIds(String(options.collectionId));
+    if (!ids) throw new Error(`Collection ${options.collectionId} not found`);
+    merged.documentIds = ids;
+    delete options.collectionId;
+  }
+
   options.metadataFilter = merged;
-  delete options.collectionId;
   return options;
 }
 
@@ -41,7 +43,7 @@ router.post('/', async (req, res) => {
       });
     }
 
-    const scoped = await applyCollectionScope(options || {});
+    const scoped = await applyCollectionScope(options || {}, req.userId);
     const result = await queryService.processQuery(query, scoped, req);
 
     res.json(result);
@@ -147,7 +149,7 @@ router.post('/advanced', async (req, res) => {
       topK,
       rerankTopK,
       collectionId: req.body.collectionId
-    });
+    }, req.userId);
 
     const result = await queryService.processQuery(query, scoped);
 
@@ -186,7 +188,7 @@ router.post('/stream', async (req, res) => {
       topK: parseInt(process.env.DEFAULT_TOP_K) || 10,
       ...options
     };
-    await applyCollectionScope(fullOptions);
+    await applyCollectionScope(fullOptions, req.userId);
 
     // Define retrieval function with full optimization pipeline
     const retrievalFn = async (q) => {

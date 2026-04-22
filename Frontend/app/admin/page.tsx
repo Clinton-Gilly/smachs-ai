@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { AdminView } from "@/components/admin/admin-view";
 import { AdminErrorBoundary } from "@/components/admin/error-boundary";
+import { AdminGuard } from "@/components/admin/admin-guard";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck } from "lucide-react";
 
@@ -18,9 +19,11 @@ export default function AdminPage() {
         </div>
       }
     >
-      <AdminErrorBoundary>
-        <AdminView />
-      </AdminErrorBoundary>
+      <AdminGuard>
+        <AdminErrorBoundary>
+          <AdminView />
+        </AdminErrorBoundary>
+      </AdminGuard>
     </AppShell>
   );
 }

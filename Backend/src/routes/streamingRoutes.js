@@ -24,7 +24,9 @@ router.post('/query', async (req, res) => {
       useQueryRewriting: process.env.ENABLE_QUERY_REWRITING === 'true',
       useHybridSearch: process.env.ENABLE_HYBRID_SEARCH === 'true',
       topK: parseInt(process.env.DEFAULT_TOP_K) || 10,
-      ...options
+      ...options,
+      // Scope retrieval to requesting user's documents
+      metadataFilter: { ...(options.metadataFilter || {}), userId: req.userId }
     };
 
     // When scoped to a single document, query rewriting frequently hurts

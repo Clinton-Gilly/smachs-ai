@@ -29,17 +29,29 @@ export type ChatThread = {
   scopedCollection?: ScopedCollection;
 };
 
-const STORAGE_KEY = "smachs.threads.v1";
+const STORAGE_KEY_PREFIX = "smachs.threads.v1";
 const EVENT = "smachs:threads-changed";
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function storageKey(): string {
+  if (typeof window === "undefined") return STORAGE_KEY_PREFIX;
+  try {
+    const raw = window.localStorage.getItem("smachs_user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      if (user?._id) return `${STORAGE_KEY_PREFIX}.${user._id}`;
+    }
+  } catch { /* ignore */ }
+  return STORAGE_KEY_PREFIX;
+}
+
 function read(): ChatThread[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey());
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -50,7 +62,7 @@ function read(): ChatThread[] {
 
 function write(threads: ChatThread[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(threads));
+  window.localStorage.setItem(storageKey(), JSON.stringify(threads));
   window.dispatchEvent(new CustomEvent(EVENT));
 }
 

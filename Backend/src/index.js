@@ -19,6 +19,7 @@ const geminiRateLimiter = require('./middleware/geminiRateLimiter');
 const tokenOptimizer = require('./utils/tokenOptimizer');
 
 // Import routes
+const authRoutes = require('./routes/authRoutes');
 const documentRoutes = require('./routes/documentRoutes');
 const queryRoutes = require('./routes/queryRoutes');
 const healthRoutes = require('./routes/healthRoutes');
@@ -28,6 +29,7 @@ const advancedQueryRoutes = require('./routes/advancedQueryRoutes');
 const usageRoutes = require('./routes/usageRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const collectionsRoutes = require('./routes/collectionsRoutes');
+const requireAuth = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -55,19 +57,27 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Rate limiting
+// Trust the Next.js dev proxy so req.ip reflects the real client, not 127.0.0.1.
+// Must be set BEFORE rate limiters so they key off the correct IP.
+app.set('trust proxy', 1);
+
+// Rate limiting — relaxed in development to avoid blocking during local testing.
+const isDev = process.env.NODE_ENV !== 'production';
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 2000 : 200,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => isDev && req.ip === '::1',
 });
 
 const queryLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50, // Stricter limit for query endpoints
+  max: isDev ? 500 : 60,
   message: 'Too many query requests, please try again later.',
+  skip: (req) => isDev && req.ip === '::1',
 });
 
 app.use('/api/', limiter);
@@ -75,8 +85,11 @@ app.use('/api/query', queryLimiter);
 app.use('/api/advanced', queryLimiter);
 app.use('/api/stream', queryLimiter);
 
-// Gemini API rate limiting (FREE TIER: 15 RPM, 1M TPM, 200 RPD)
-app.use(geminiRateLimiter.middleware());
+// Gemini API rate limiting — only on routes that actually call Gemini
+app.use('/api/query', geminiRateLimiter.middleware());
+app.use('/api/stream', geminiRateLimiter.middleware());
+app.use('/api/chat', geminiRateLimiter.middleware());
+app.use('/api/advanced', geminiRateLimiter.middleware());
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -95,25 +108,20 @@ app.use((req, res, next) => {
   next();
 });
 
-// Trust the reverse proxy (Render/Heroku/etc) so req.ip is correct for rate-limiting.
-// Use an env var so you can control this in dev vs production.
-if (process.env.TRUST_PROXY === 'true' || process.env.NODE_ENV === 'production') {
-  // Option: `true` trusts all proxies in the chain; `1` trusts only the first proxy.
-  // For Render, `true` or `1` is fine. If you want to be conservative use '1'.
-  app.set('trust proxy', 1);
-  console.log('Express trust proxy enabled');
-}
 
-// Routes
+// Routes — auth is public; everything else requires a valid JWT
 app.use('/api/health', healthRoutes);
-app.use('/api/documents', documentRoutes);
-app.use('/api/query', queryRoutes);
-app.use('/api/stream', streamingRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/advanced', advancedQueryRoutes);
-app.use('/api/usage', usageRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/api/collections', collectionsRoutes);
+app.use('/api/auth', authRoutes);
+
+// Protected routes
+app.use('/api/documents', requireAuth, documentRoutes);
+app.use('/api/query',     requireAuth, queryRoutes);
+app.use('/api/stream',    requireAuth, streamingRoutes);
+app.use('/api/analytics', requireAuth, analyticsRoutes);
+app.use('/api/advanced',  requireAuth, advancedQueryRoutes);
+app.use('/api/usage',     requireAuth, usageRoutes);
+app.use('/api/chat',      requireAuth, chatRoutes);
+app.use('/api/collections', requireAuth, collectionsRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

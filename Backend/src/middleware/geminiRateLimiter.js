@@ -12,11 +12,12 @@ const logger = require('../utils/logger');
  */
 class GeminiRateLimiter {
   constructor() {
-    // Free tier limits for gemini-2.0-flash
+    // Free tier limits for gemini-2.0-flash (set higher to avoid false-positives;
+    // the real Gemini API will return 429 if the actual limit is hit)
     this.limits = {
-      rpm: parseInt(process.env.GEMINI_RPM_LIMIT) || 15,
+      rpm: parseInt(process.env.GEMINI_RPM_LIMIT) || 14, // stay just under 15 to be safe
       tpm: parseInt(process.env.GEMINI_TPM_LIMIT) || 1000000,
-      rpd: parseInt(process.env.GEMINI_RPD_LIMIT) || 200
+      rpd: parseInt(process.env.GEMINI_RPD_LIMIT) || 190
     };
 
     // Usage tracking
@@ -180,7 +181,7 @@ class GeminiRateLimiter {
    * Express middleware
    */
   middleware() {
-    return (req, res, next) => {
+    return async (req, res, next) => {
       // Skip rate limiting for health checks
       if (req.path === '/api/health') {
         return next();
@@ -197,26 +198,37 @@ class GeminiRateLimiter {
       const check = this.canProceed(estimatedTokens);
 
       if (!check.allowed) {
-        logger.warn('Rate limit exceeded', {
-          reason: check.reason,
-          current: check.current,
-          limit: check.limit,
-          path: req.path
-        });
-
-        return res.status(429).json({
-          success: false,
-          error: 'Rate limit exceeded',
-          details: {
-            reason: check.reason,
-            message: check.message,
-            current: check.current,
-            limit: check.limit,
-            resetTime: new Date(check.resetTime).toISOString(),
-            retryAfter: Math.ceil((check.resetTime - Date.now()) / 1000)
-          },
-          suggestion: 'Please wait before making another request, or enable caching to reduce API calls.'
-        });
+        // Wait until the minute window resets, then proceed (up to 65 s)
+        const waitMs = Math.min(check.resetTime - Date.now() + 500, 65000);
+        if (waitMs > 0 && check.reason === 'RPM_EXCEEDED') {
+          logger.warn(`Gemini RPM limit — queuing request for ${Math.ceil(waitMs / 1000)}s`, { path: req.path });
+          await new Promise((r) => setTimeout(r, waitMs));
+          // Re-check after waiting
+          const recheck = this.canProceed(estimatedTokens);
+          if (!recheck.allowed) {
+            return res.status(429).json({
+              success: false,
+              error: 'Rate limit exceeded after retry',
+              details: recheck,
+              suggestion: 'Too many requests — please slow down.'
+            });
+          }
+        } else {
+          logger.warn('Rate limit exceeded', { reason: check.reason, path: req.path });
+          return res.status(429).json({
+            success: false,
+            error: 'Rate limit exceeded',
+            details: {
+              reason: check.reason,
+              message: check.message,
+              current: check.current,
+              limit: check.limit,
+              resetTime: new Date(check.resetTime).toISOString(),
+              retryAfter: Math.ceil((check.resetTime - Date.now()) / 1000)
+            },
+            suggestion: 'Please wait before making another request.'
+          });
+        }
       }
 
       // Record usage

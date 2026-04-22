@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./api";
+import { authHeaders } from "./auth";
 
 export type TimeRange = "1h" | "24h" | "7d" | "30d";
 
@@ -139,6 +140,7 @@ export async function getAnalyticsStats(
   signal?: AbortSignal
 ): Promise<AnalyticsStats> {
   const res = await fetch(`${API_BASE_URL}/analytics/stats?timeRange=${timeRange}`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
@@ -153,6 +155,7 @@ export async function getPopularQueries(
   if (params.limit) q.set("limit", String(params.limit));
   if (params.timeRange) q.set("timeRange", params.timeRange);
   const res = await fetch(`${API_BASE_URL}/analytics/popular?${q}`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
@@ -167,6 +170,7 @@ export async function getSlowQueries(
   if (params.limit) q.set("limit", String(params.limit));
   if (params.threshold) q.set("threshold", String(params.threshold));
   const res = await fetch(`${API_BASE_URL}/analytics/slow?${q}`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
@@ -178,6 +182,7 @@ export async function getRetrievalMethods(
   signal?: AbortSignal
 ): Promise<{ methods: RetrievalMethod[] }> {
   const res = await fetch(`${API_BASE_URL}/analytics/methods?timeRange=${timeRange}`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
@@ -189,6 +194,7 @@ export async function getFeedbackSummary(
   signal?: AbortSignal
 ): Promise<{ summary: FeedbackSummary; commonIssues: CommonIssue[] }> {
   const res = await fetch(`${API_BASE_URL}/analytics/feedback/summary?timeRange=${timeRange}`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
@@ -198,6 +204,7 @@ export async function getFeedbackSummary(
 export async function clearCache(signal?: AbortSignal): Promise<{ message: string }> {
   const res = await fetch(`${API_BASE_URL}/analytics/cache/clear`, {
     method: "POST",
+    headers: { ...authHeaders() },
     signal
   });
   return unwrap<{ message: string }>(res);
@@ -205,6 +212,7 @@ export async function clearCache(signal?: AbortSignal): Promise<{ message: strin
 
 export async function getUsageDashboard(signal?: AbortSignal): Promise<UsageDashboard> {
   const res = await fetch(`${API_BASE_URL}/usage/dashboard`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
@@ -214,6 +222,7 @@ export async function getUsageDashboard(signal?: AbortSignal): Promise<UsageDash
 export async function resetTokenStats(signal?: AbortSignal): Promise<{ message: string }> {
   const res = await fetch(`${API_BASE_URL}/usage/reset-token-stats`, {
     method: "POST",
+    headers: { ...authHeaders() },
     signal
   });
   return unwrap<{ message: string }>(res);

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./api";
+import { authHeaders } from "./auth";
 
 export type DocCollection = {
   collectionId: string;
@@ -26,6 +27,7 @@ export async function listCollections(
   signal?: AbortSignal
 ): Promise<DocCollection[]> {
   const res = await fetch(`${API_BASE_URL}/collections`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
@@ -39,7 +41,7 @@ export async function createCollection(body: {
 }): Promise<DocCollection> {
   const res = await fetch(`${API_BASE_URL}/collections`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify(body)
   });
   return unwrap<DocCollection>(res);
@@ -51,7 +53,7 @@ export async function getCollection(
 ): Promise<DocCollection> {
   const res = await fetch(
     `${API_BASE_URL}/collections/${encodeURIComponent(collectionId)}`,
-    { signal, cache: "no-store" }
+    { headers: { ...authHeaders() }, signal, cache: "no-store" }
   );
   return unwrap<DocCollection>(res);
 }
@@ -64,7 +66,7 @@ export async function updateCollection(
     `${API_BASE_URL}/collections/${encodeURIComponent(collectionId)}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(patch)
     }
   );
@@ -79,7 +81,7 @@ export async function addToCollection(
     `${API_BASE_URL}/collections/${encodeURIComponent(collectionId)}/documents`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ documentIds })
     }
   );
@@ -94,7 +96,7 @@ export async function removeFromCollection(
     `${API_BASE_URL}/collections/${encodeURIComponent(
       collectionId
     )}/documents/${encodeURIComponent(documentId)}`,
-    { method: "DELETE" }
+    { method: "DELETE", headers: { ...authHeaders() } }
   );
   return unwrap<DocCollection>(res);
 }
@@ -104,7 +106,7 @@ export async function deleteCollection(
 ): Promise<{ deleted: boolean }> {
   const res = await fetch(
     `${API_BASE_URL}/collections/${encodeURIComponent(collectionId)}`,
-    { method: "DELETE" }
+    { method: "DELETE", headers: { ...authHeaders() } }
   );
   return unwrap<{ deleted: boolean }>(res);
 }

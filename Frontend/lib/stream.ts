@@ -1,4 +1,5 @@
 import { API_BASE_URL, QueryOptions, RetrievedContext } from "./api";
+import { authHeaders } from "./auth";
 
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 
@@ -38,7 +39,8 @@ export async function streamQuery(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Accept: "text/event-stream"
+      Accept: "text/event-stream",
+      ...authHeaders()
     },
     body: JSON.stringify({ query, options }),
     signal
@@ -130,7 +132,8 @@ export async function streamChat(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Accept: "text/event-stream"
+      Accept: "text/event-stream",
+      ...authHeaders()
     },
     body: JSON.stringify({ messages, options }),
     signal

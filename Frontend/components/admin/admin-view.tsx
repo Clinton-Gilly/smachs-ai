@@ -97,6 +97,13 @@ import {
 } from "@/lib/collections";
 import { fetchHealth } from "@/lib/api";
 import { threadsStore, type ChatThread } from "@/lib/threads";
+import {
+  listUsers,
+  createUser,
+  updateUser,
+  deleteUser,
+  type AuthUser
+} from "@/lib/auth";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -1099,36 +1106,101 @@ function UserEngagementTab({ push }: { push: (t: Omit<Toast, "id">) => void }) {
 
 // ─── Tab: User Management ────────────────────────────────────────────────────
 
+const EMPTY_FORM = { username: "", email: "", displayName: "", password: "", role: "user" as "user" | "admin" };
+
 function UserManagementTab({ push }: { push: (t: Omit<Toast, "id">) => void }) {
-  const [threads, setThreads] = React.useState<ChatThread[]>([]);
+  const [users, setUsers] = React.useState<AuthUser[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
-  const [deleteThread, setDeleteThread] = React.useState<ChatThread | null>(null);
+  const [showCreate, setShowCreate] = React.useState(false);
+  const [editUser, setEditUser] = React.useState<AuthUser | null>(null);
+  const [deleteTarget, setDeleteTarget] = React.useState<AuthUser | null>(null);
+  const [form, setForm] = React.useState(EMPTY_FORM);
+  const [editForm, setEditForm] = React.useState<{ displayName: string; email: string; password: string; role: "user" | "admin"; isActive: boolean }>({ displayName: "", email: "", password: "", role: "user", isActive: true });
   const [busy, setBusy] = React.useState(false);
 
-  React.useEffect(() => { setThreads(threadsStore.list()); }, []);
+  const load = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const u = await listUsers();
+      setUsers(u);
+    } catch (e: any) {
+      push({ kind: "error", text: e.message });
+    } finally {
+      setLoading(false);
+    }
+  }, [push]);
 
-  const filtered = threads.filter((t) =>
-    t.title.toLowerCase().includes(search.toLowerCase()) ||
-    t.mode.toLowerCase().includes(search.toLowerCase())
+  React.useEffect(() => { load(); }, [load]);
+
+  const filtered = users.filter((u) =>
+    [u.username, u.displayName, u.email].some((v) =>
+      v?.toLowerCase().includes(search.toLowerCase())
+    )
   );
 
-  const handleDelete = () => {
-    if (!deleteThread) return;
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
     setBusy(true);
     try {
-      threadsStore.remove(deleteThread.id);
-      setThreads(threadsStore.list());
-      push({ kind: "success", text: `Session "${deleteThread.title}" deleted` });
-      setDeleteThread(null);
+      await createUser(form);
+      push({ kind: "success", text: `Account created for @${form.username}` });
+      setForm(EMPTY_FORM);
+      setShowCreate(false);
+      load();
+    } catch (err: any) {
+      push({ kind: "error", text: err.message });
     } finally {
       setBusy(false);
     }
   };
 
-  const handleArchive = (thread: ChatThread) => {
-    threadsStore.toggleArchive(thread.id);
-    setThreads(threadsStore.list());
-    push({ kind: "info", text: thread.archived ? "Session unarchived" : "Session archived" });
+  const openEdit = (u: AuthUser) => {
+    setEditUser(u);
+    setEditForm({ displayName: u.displayName, email: u.email, password: "", role: u.role, isActive: u.isActive });
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editUser) return;
+    setBusy(true);
+    try {
+      const patch: any = { displayName: editForm.displayName, email: editForm.email, role: editForm.role, isActive: editForm.isActive };
+      if (editForm.password) patch.password = editForm.password;
+      await updateUser(editUser._id, patch);
+      push({ kind: "success", text: `@${editUser.username} updated` });
+      setEditUser(null);
+      load();
+    } catch (err: any) {
+      push({ kind: "error", text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setBusy(true);
+    try {
+      await deleteUser(deleteTarget._id);
+      push({ kind: "success", text: `@${deleteTarget.username} deleted` });
+      setDeleteTarget(null);
+      load();
+    } catch (err: any) {
+      push({ kind: "error", text: err.message });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleActive = async (u: AuthUser) => {
+    try {
+      await updateUser(u._id, { isActive: !u.isActive });
+      push({ kind: "info", text: `@${u.username} ${u.isActive ? "disabled" : "enabled"}` });
+      load();
+    } catch (err: any) {
+      push({ kind: "error", text: err.message });
+    }
   };
 
   return (
@@ -1136,111 +1208,190 @@ function UserManagementTab({ push }: { push: (t: Omit<Toast, "id">) => void }) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold">User Management</h2>
-          <p className="text-xs text-muted-foreground">Manage chat sessions and user activity</p>
+          <p className="text-xs text-muted-foreground">Create and manage user accounts</p>
         </div>
+        <Button size="sm" className="gap-1.5 h-8 text-xs" onClick={() => setShowCreate(true)}>
+          <Plus className="h-3.5 w-3.5" /> Create User
+        </Button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <StatCard label="Total Sessions" value={threads.length} icon={Users} color="text-blue-400" />
-        <StatCard label="Active Sessions" value={threads.filter((t) => !t.archived).length} icon={Activity} color="text-emerald-400" />
-        <StatCard label="Archived" value={threads.filter((t) => t.archived).length} icon={Database} color="text-muted-foreground" />
+        <StatCard label="Total Users" value={users.length} icon={Users} color="text-blue-400" />
+        <StatCard label="Active" value={users.filter((u) => u.isActive).length} icon={Activity} color="text-emerald-400" />
+        <StatCard label="Admins" value={users.filter((u) => u.role === "admin").length} icon={ShieldCheck} color="text-primary" />
       </div>
 
       {/* Search */}
       <Input
-        placeholder="Search sessions by title or mode…"
+        placeholder="Search by name, username or email…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="h-8 text-xs"
       />
 
-      {/* Sessions table */}
+      {/* Users table */}
       <Card>
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border/60 text-muted-foreground">
-                <th className="px-4 py-2.5 text-left font-medium">Session Title</th>
-                <th className="px-4 py-2.5 text-left font-medium">Mode</th>
-                <th className="px-4 py-2.5 text-left font-medium">Messages</th>
+                <th className="px-4 py-2.5 text-left font-medium">User</th>
+                <th className="px-4 py-2.5 text-left font-medium">Username</th>
+                <th className="px-4 py-2.5 text-left font-medium">Role</th>
                 <th className="px-4 py-2.5 text-left font-medium">Status</th>
-                <th className="px-4 py-2.5 text-left font-medium">Last Active</th>
+                <th className="px-4 py-2.5 text-left font-medium">Joined</th>
                 <th className="px-4 py-2.5 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                    No sessions found
+              {loading ? (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mx-auto" /></td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No users found</td></tr>
+              ) : filtered.map((u) => (
+                <tr key={u._id} className="border-b border-border/20 hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-emerald-600 text-white text-xs font-bold">
+                        {(u.displayName || u.username).slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-medium">{u.displayName || u.username}</p>
+                        <p className="text-muted-foreground">{u.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 text-muted-foreground">@{u.username}</td>
+                  <td className="px-4 py-2.5">
+                    <Badge variant="outline" className={cn("text-[10px]", u.role === "admin" ? "border-primary/40 text-primary" : "")}>
+                      {u.role}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <button onClick={() => toggleActive(u)} title="Toggle active">
+                      <Badge variant={u.isActive ? "default" : "secondary"} className={cn("text-[10px] cursor-pointer", u.isActive ? "bg-emerald-900/30 text-emerald-300 border-emerald-800/40" : "")}>
+                        {u.isActive ? "Active" : "Disabled"}
+                      </Badge>
+                    </button>
+                  </td>
+                  <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">{u.createdAt ? fmtDate(new Date(u.createdAt).getTime()) : "—"}</td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-6 w-6" title="Edit" onClick={() => openEdit(u)}>
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" title="Delete" onClick={() => setDeleteTarget(u)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
-              ) : (
-                filtered.map((thread) => (
-                  <tr key={thread.id} className="border-b border-border/20 hover:bg-muted/30 transition-colors">
-                    <td className="px-4 py-2.5">
-                      <span className="font-medium line-clamp-1 max-w-[200px] block" title={thread.title}>
-                        {thread.title}
-                      </span>
-                      {thread.scopedDocument && (
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                          <FileText className="h-2.5 w-2.5" /> {thread.scopedDocument.filename}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "text-[10px]",
-                          thread.mode === "rag" && "bg-amber-900/30 text-amber-300",
-                          thread.mode === "general" && "bg-emerald-900/30 text-emerald-300"
-                        )}
-                      >
-                        {thread.mode.toUpperCase()}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-2.5 tabular-nums">{thread.messages.length}</td>
-                    <td className="px-4 py-2.5">
-                      {thread.archived ? (
-                        <Badge variant="secondary" className="text-[10px]">Archived</Badge>
-                      ) : (
-                        <Badge variant="default" className="text-[10px] bg-emerald-900/30 text-emerald-300 border-emerald-800/40">Active</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-muted-foreground whitespace-nowrap">
-                      {fmtDate(thread.updatedAt)}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-6 w-6" title={thread.archived ? "Unarchive" : "Archive"} onClick={() => handleArchive(thread)}>
-                          <Database className="h-3 w-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" title="Delete" onClick={() => setDeleteThread(thread)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
       </Card>
 
+      {/* Create User Dialog */}
+      <Dialog open={showCreate} onOpenChange={(o) => { setShowCreate(o); if (!o) setForm(EMPTY_FORM); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create User Account</DialogTitle>
+            <DialogDescription>Create a new account. Share the credentials with the user.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleCreate} className="space-y-3 mt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium">Username *</label>
+                <Input required value={form.username} onChange={(e) => setForm((f) => ({ ...f, username: e.target.value }))} placeholder="john_doe" className="h-8 text-xs" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium">Display Name</label>
+                <Input value={form.displayName} onChange={(e) => setForm((f) => ({ ...f, displayName: e.target.value }))} placeholder="John Doe" className="h-8 text-xs" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium">Email *</label>
+              <Input required type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="john@company.com" className="h-8 text-xs" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium">Password *</label>
+              <Input required type="password" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} placeholder="Min 6 characters" className="h-8 text-xs" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium">Role</label>
+              <select value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as "user" | "admin" }))}
+                className="h-8 rounded-md border border-border bg-background px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={busy}>{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Create Account"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(o) => !o && setEditUser(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit @{editUser?.username}</DialogTitle>
+            <DialogDescription>Leave password blank to keep the current one.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-3 mt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium">Display Name</label>
+                <Input value={editForm.displayName} onChange={(e) => setEditForm((f) => ({ ...f, displayName: e.target.value }))} className="h-8 text-xs" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium">Email</label>
+                <Input type="email" value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="h-8 text-xs" />
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium">New Password</label>
+              <Input type="password" value={editForm.password} onChange={(e) => setEditForm((f) => ({ ...f, password: e.target.value }))} placeholder="Leave blank to keep current" className="h-8 text-xs" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium">Role</label>
+                <select value={editForm.role} onChange={(e) => setEditForm((f) => ({ ...f, role: e.target.value as "user" | "admin" }))}
+                  className="h-8 rounded-md border border-border bg-background px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium">Status</label>
+                <select value={editForm.isActive ? "active" : "disabled"} onChange={(e) => setEditForm((f) => ({ ...f, isActive: e.target.value === "active" }))}
+                  className="h-8 rounded-md border border-border bg-background px-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
+                  <option value="active">Active</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </div>
+            </div>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setEditUser(null)}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={busy}>{busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Save Changes"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirm */}
-      <Dialog open={!!deleteThread} onOpenChange={(o) => !o && setDeleteThread(null)}>
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Session?</DialogTitle>
-            <DialogDescription>
-              &quot;{deleteThread?.title}&quot; with {deleteThread?.messages.length} messages will be permanently removed.
-            </DialogDescription>
+            <DialogTitle>Delete @{deleteTarget?.username}?</DialogTitle>
+            <DialogDescription>This will permanently remove the account and cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setDeleteThread(null)}>Cancel</Button>
+            <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancel</Button>
             <Button variant="destructive" size="sm" onClick={handleDelete} disabled={busy}>Delete</Button>
           </DialogFooter>
         </DialogContent>

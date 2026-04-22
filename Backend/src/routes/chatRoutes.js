@@ -6,6 +6,33 @@ const logger = require('../utils/logger');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const DEFAULT_MODEL = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 
+// Retry a Gemini call up to maxRetries times on rate-limit (429) errors.
+async function withRetry(fn, maxRetries = 3) {
+  let delay = 5000; // start at 5 s
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const is429 = err?.status === 429 ||
+        err?.message?.includes('429') ||
+        err?.message?.toLowerCase().includes('rate limit') ||
+        err?.message?.toLowerCase().includes('quota');
+      if (is429 && attempt < maxRetries) {
+        // honour retryAfter from the error if available
+        const retryAfter = err?.errorDetails?.find?.((d) => d?.retryDelay)?.retryDelay;
+        const waitMs = retryAfter
+          ? parseInt(retryAfter) * 1000
+          : delay;
+        logger.warn(`Gemini rate-limited — retrying in ${waitMs / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise((r) => setTimeout(r, waitMs));
+        delay *= 2; // exponential back-off
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 function setupSSE(res) {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -77,7 +104,7 @@ router.post('/stream', async (req, res) => {
     }));
 
     const chat = model.startChat({ history });
-    const stream = await chat.sendMessageStream(String(lastUser.content));
+    const stream = await withRetry(() => chat.sendMessageStream(String(lastUser.content)));
 
     let full = '';
     let chunkIndex = 0;

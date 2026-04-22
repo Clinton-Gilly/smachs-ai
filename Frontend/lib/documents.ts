@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "./api";
+import { authHeaders } from "./auth";
 
 export type DocumentRow = {
   documentId: string;
@@ -91,50 +92,43 @@ export async function listDocuments(
   if (params.collectionId) q.set("collectionId", params.collectionId);
   const suffix = q.toString() ? `?${q}` : "";
   const res = await fetch(`${API_BASE_URL}/documents${suffix}`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
   return unwrap<DocumentListResponse>(res);
 }
 
-export async function getDocumentFacets(
-  signal?: AbortSignal
-): Promise<DocumentFacets> {
+export async function getDocumentFacets(signal?: AbortSignal): Promise<DocumentFacets> {
   const res = await fetch(`${API_BASE_URL}/documents/facets`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
   return unwrap<DocumentFacets>(res);
 }
 
-export async function getDocumentStats(
-  signal?: AbortSignal
-): Promise<DocumentStats> {
+export async function getDocumentStats(signal?: AbortSignal): Promise<DocumentStats> {
   const res = await fetch(`${API_BASE_URL}/documents/stats`, {
+    headers: { ...authHeaders() },
     signal,
     cache: "no-store"
   });
   return unwrap<DocumentStats>(res);
 }
 
-export async function getDocument(
-  documentId: string,
-  chunkLimit = 20,
-  signal?: AbortSignal
-): Promise<DocumentDetail> {
+export async function getDocument(documentId: string, chunkLimit = 20, signal?: AbortSignal): Promise<DocumentDetail> {
   const res = await fetch(
     `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}?chunkLimit=${chunkLimit}`,
-    { signal, cache: "no-store" }
+    { headers: { ...authHeaders() }, signal, cache: "no-store" }
   );
   return unwrap<DocumentDetail>(res);
 }
 
-export async function deleteDocument(
-  documentId: string
-): Promise<{ documentId: string }> {
+export async function deleteDocument(documentId: string): Promise<{ documentId: string }> {
   const res = await fetch(
     `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}`,
-    { method: "DELETE" }
+    { method: "DELETE", headers: { ...authHeaders() } }
   );
   return unwrap<{ documentId: string }>(res);
 }
@@ -165,6 +159,7 @@ export async function uploadDocument(
 
   const res = await fetch(`${API_BASE_URL}/documents/upload`, {
     method: "POST",
+    headers: { ...authHeaders() },
     body: form,
     signal
   });
@@ -182,7 +177,7 @@ export async function ingestUrl(
 ): Promise<{ documentId: string; chunksCreated: number }> {
   const res = await fetch(`${API_BASE_URL}/documents/url`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({
       url,
       metadata: {
@@ -207,7 +202,7 @@ export async function updateDocument(
     `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}`,
     {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(patch)
     }
   );
@@ -222,7 +217,7 @@ export async function reindexDocument(
     `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/reindex`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(body)
     }
   );
@@ -232,7 +227,7 @@ export async function reindexDocument(
 export async function exportDocument(documentId: string): Promise<void> {
   const res = await fetch(
     `${API_BASE_URL}/documents/${encodeURIComponent(documentId)}/export`,
-    { cache: "no-store" }
+    { headers: { ...authHeaders() }, cache: "no-store" }
   );
   if (!res.ok) {
     throw new Error(`Export failed (${res.status})`);
@@ -258,7 +253,7 @@ export async function uploadText(
 ): Promise<{ documentId: string; chunksCreated: number }> {
   const res = await fetch(`${API_BASE_URL}/documents/text`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({
       text,
       metadata: {

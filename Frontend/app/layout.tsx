@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/components/providers/auth-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,7 +32,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
+          <AuthProvider>
+            <TooltipProvider delayDuration={150}>{children}</TooltipProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

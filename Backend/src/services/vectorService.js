@@ -426,12 +426,14 @@ class VectorService {
     category = '',
     author = '',
     tag = '',
-    documentIds = null
+    documentIds = null,
+    userId = null
   } = {}) {
     try {
       const collection = this.getCollection();
 
       const match = {};
+      if (userId) match['metadata.userId'] = userId;
       if (search) {
         const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
         match.$or = [
