@@ -40,13 +40,16 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    // Extract metadata from request body
+    // Extract metadata from request body.
+    // Admin uploads are marked isGlobal=true so all users can query them.
+    const isAdmin = req.user.role === 'admin';
     const metadata = {
       category: req.body.category,
       author: req.body.author,
       tags: req.body.tags ? JSON.parse(req.body.tags) : [],
       description: req.body.description,
-      userId: req.userId  // scope document to the uploading user
+      userId: isAdmin ? null : req.userId,
+      isGlobal: isAdmin
     };
 
     const result = await documentService.processDocument(req.file, metadata);
@@ -70,11 +73,17 @@ router.post('/upload', upload.single('file'), async (req, res) => {
  */
 router.post('/url', async (req, res) => {
   try {
-    const { url, metadata } = req.body || {};
+    const { url, metadata: bodyMeta } = req.body || {};
     if (!url || typeof url !== 'string') {
       return res.status(400).json({ success: false, error: 'url is required' });
     }
-    const result = await documentService.processUrl(url, metadata || {});
+    const isAdmin = req.user.role === 'admin';
+    const metadata = {
+      ...(bodyMeta || {}),
+      userId: isAdmin ? null : req.userId,
+      isGlobal: isAdmin
+    };
+    const result = await documentService.processUrl(url, metadata);
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('Error ingesting URL:', error);
@@ -88,7 +97,7 @@ router.post('/url', async (req, res) => {
  */
 router.post('/text', async (req, res) => {
   try {
-    const { text, metadata } = req.body;
+    const { text, metadata: bodyMeta } = req.body;
 
     if (!text) {
       return res.status(400).json({
@@ -97,7 +106,13 @@ router.post('/text', async (req, res) => {
       });
     }
 
-    const result = await documentService.processText(text, metadata || {});
+    const isAdmin = req.user.role === 'admin';
+    const metadata = {
+      ...(bodyMeta || {}),
+      userId: isAdmin ? null : req.userId,
+      isGlobal: isAdmin
+    };
+    const result = await documentService.processText(text, metadata);
 
     res.json({
       success: true,
@@ -162,7 +177,7 @@ router.get('/', async (req, res) => {
       documentIds = col.documentIds || [];
     }
 
-    // Admins see all documents; regular users only see their own
+    // Admins see all documents; regular users see their own + global docs
     const userId = req.user.role === 'admin' ? null : req.userId;
 
     const result = await documentService.listDocuments({

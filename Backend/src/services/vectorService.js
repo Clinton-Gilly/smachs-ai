@@ -248,6 +248,14 @@ class VectorService {
   buildMetadataFilter(metadataFilter) {
     const filter = {};
 
+    // userId: match user's own docs OR global docs
+    if (metadataFilter.userId) {
+      filter.$or = [
+        { 'metadata.userId': metadataFilter.userId },
+        { 'metadata.isGlobal': true }
+      ];
+    }
+
     if (metadataFilter.category) {
       filter['metadata.category'] = metadataFilter.category;
     }
@@ -272,7 +280,6 @@ class VectorService {
 
     if (Array.isArray(metadataFilter.documentIds)) {
       if (metadataFilter.documentIds.length === 0) {
-        // Force-empty match.
         filter.documentId = { $in: ['__none__'] };
       } else {
         filter.documentId = { $in: metadataFilter.documentIds };
@@ -433,17 +440,22 @@ class VectorService {
       const collection = this.getCollection();
 
       const match = {};
-      if (userId) match['metadata.userId'] = userId;
+      const andClauses = [];
+      if (userId) {
+        // Show user's own docs + all global (admin-uploaded) docs
+        andClauses.push({ $or: [{ 'metadata.userId': userId }, { 'metadata.isGlobal': true }] });
+      }
       if (search) {
         const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-        match.$or = [
+        andClauses.push({ $or: [
           { 'metadata.filename': rx },
           { 'metadata.source': rx },
           { 'metadata.description': rx },
           { 'metadata.author': rx },
           { 'metadata.tags': rx }
-        ];
+        ]});
       }
+      if (andClauses.length) match.$and = andClauses;
       if (category) match['metadata.category'] = category;
       if (author) match['metadata.author'] = author;
       if (tag) match['metadata.tags'] = tag;

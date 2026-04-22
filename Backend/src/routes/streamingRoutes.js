@@ -25,8 +25,9 @@ router.post('/query', async (req, res) => {
       useHybridSearch: process.env.ENABLE_HYBRID_SEARCH === 'true',
       topK: parseInt(process.env.DEFAULT_TOP_K) || 10,
       ...options,
-      // Scope retrieval to requesting user's documents
+      // Scope retrieval to requesting user's own docs + global knowledge base
       metadataFilter: { ...(options.metadataFilter || {}), userId: req.userId }
+      // userId in metadataFilter is resolved by buildMetadataFilter to: userId==req.userId OR isGlobal==true
     };
 
     // When scoped to a single document, query rewriting frequently hurts
