@@ -3,6 +3,7 @@ const router = express.Router();
 const streamingService = require('../services/streamingService');
 const queryService = require('../services/queryService');
 const geminiService = require('../services/geminiService');
+const analyticsService = require('../services/analyticsService');
 const logger = require('../utils/logger');
 
 /**
@@ -25,9 +26,11 @@ router.post('/query', async (req, res) => {
       useHybridSearch: process.env.ENABLE_HYBRID_SEARCH === 'true',
       topK: parseInt(process.env.DEFAULT_TOP_K) || 10,
       ...options,
-      // Scope retrieval to requesting user's own docs + global knowledge base
-      metadataFilter: { ...(options.metadataFilter || {}), userId: req.userId }
-      // userId in metadataFilter is resolved by buildMetadataFilter to: userId==req.userId OR isGlobal==true
+      // Company mode sends isGlobal:true — search global KB only, no userId scope.
+      // Knowledge/RAG mode — scope to the requesting user's own documents only.
+      metadataFilter: (options.metadataFilter || {}).isGlobal
+        ? { isGlobal: true }
+        : { ...(options.metadataFilter || {}), userId: req.userId }
     };
 
     // When scoped to a single document, query rewriting frequently hurts
@@ -54,8 +57,22 @@ router.post('/query', async (req, res) => {
       return result;
     };
 
+    const isGlobalQuery = !!(options.metadataFilter || {}).isGlobal;
+    const t0 = Date.now();
+
     // Stream the RAG process
     await streamingService.streamRAGProcess(res, query, retrievalFn, fullOptions);
+
+    // Log analytics for global knowledge base queries
+    if (isGlobalQuery) {
+      analyticsService.logQuery({
+        query,
+        isGlobalQuery: true,
+        mode: 'coanony',
+        userId: req.userId,
+        totalTime: Date.now() - t0
+      }).catch(() => {});
+    }
 
   } catch (error) {
     logger.error('Streaming query failed', { error: error.message });

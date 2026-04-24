@@ -34,6 +34,9 @@ class AnalyticsService {
         processedQuery: data.processedQuery,
         retrievalMethod: data.retrievalMethod,
         optimizations: data.optimizations,
+        mode: data.mode || 'rag', // 'coanony' | 'rag' | 'general'
+        isGlobalQuery: data.isGlobalQuery || false,
+        userId: data.userId || null,
         performance: {
           totalTime: data.totalTime,
           retrievalTime: data.retrievalTime,
@@ -330,6 +333,54 @@ class AnalyticsService {
     return {
       timestamp: { $gte: startTime }
     };
+  }
+
+  /**
+   * Get query stats for the global (company) knowledge base
+   */
+  async getGlobalKnowledgeBaseStats(timeRange = '7d') {
+    try {
+      const collection = this.getAnalyticsCollection();
+      const timeFilter = this.getTimeFilter(timeRange);
+
+      const [totals, topQueries] = await Promise.all([
+        collection.aggregate([
+          { $match: { ...timeFilter, isGlobalQuery: true } },
+          { $group: {
+            _id: null,
+            totalQueries: { $sum: 1 },
+            avgTime: { $avg: '$performance.totalTime' },
+            avgContexts: { $avg: '$performance.contextsRetrieved' }
+          }}
+        ]).toArray(),
+        collection.aggregate([
+          { $match: { ...timeFilter, isGlobalQuery: true } },
+          { $group: {
+            _id: '$query',
+            count: { $sum: 1 },
+            lastQueried: { $max: '$timestamp' },
+            avgTime: { $avg: '$performance.totalTime' }
+          }},
+          { $sort: { count: -1 } },
+          { $limit: 10 }
+        ]).toArray()
+      ]);
+
+      return {
+        totalQueries: totals[0]?.totalQueries || 0,
+        avgResponseTime: Math.round(totals[0]?.avgTime || 0),
+        avgContextsRetrieved: parseFloat((totals[0]?.avgContexts || 0).toFixed(1)),
+        topQueries: topQueries.map((q) => ({
+          query: q._id,
+          count: q.count,
+          lastQueried: q.lastQueried,
+          avgTime: Math.round(q.avgTime || 0)
+        }))
+      };
+    } catch (error) {
+      logger.error('Failed to get global KB stats', { error: error.message });
+      return { totalQueries: 0, avgResponseTime: 0, avgContextsRetrieved: 0, topQueries: [] };
+    }
   }
 
   /**

@@ -210,6 +210,25 @@ export async function clearCache(signal?: AbortSignal): Promise<{ message: strin
   return unwrap<{ message: string }>(res);
 }
 
+export type GlobalKBStats = {
+  totalQueries: number;
+  avgResponseTime: number;
+  avgContextsRetrieved: number;
+  topQueries: { query: string; count: number; lastQueried: string; avgTime: number }[];
+};
+
+export async function getGlobalKBStats(
+  timeRange: TimeRange = "7d",
+  signal?: AbortSignal
+): Promise<GlobalKBStats> {
+  const res = await fetch(`${API_BASE_URL}/analytics/global-kb?timeRange=${timeRange}`, {
+    headers: { ...authHeaders() },
+    signal,
+    cache: "no-store"
+  });
+  return unwrap<GlobalKBStats>(res);
+}
+
 export async function getUsageDashboard(signal?: AbortSignal): Promise<UsageDashboard> {
   const res = await fetch(`${API_BASE_URL}/usage/dashboard`, {
     headers: { ...authHeaders() },

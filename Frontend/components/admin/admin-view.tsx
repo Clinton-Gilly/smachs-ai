@@ -59,9 +59,11 @@ import {
   getRetrievalMethods,
   getFeedbackSummary,
   clearCache,
+  getGlobalKBStats,
   getUsageDashboard,
   resetTokenStats,
   type TimeRange,
+  type GlobalKBStats,
   type AnalyticsStats,
   type PopularQuery,
   type SlowQuery,
@@ -1596,26 +1598,30 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
   const [docStats, setDocStats] = React.useState<DocumentStats | null>(null);
   const [facets, setFacets] = React.useState<DocumentFacets | null>(null);
   const [recentDocs, setRecentDocs] = React.useState<DocumentRow[]>([]);
+  const [kbStats, setKbStats] = React.useState<GlobalKBStats | null>(null);
+  const [timeRange, setTimeRange] = React.useState<TimeRange>("7d");
   const [loading, setLoading] = React.useState(true);
 
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [cl, ds, f, docs] = await Promise.allSettled([
+      const [cl, ds, f, docs, kb] = await Promise.allSettled([
         listCollections(),
         getDocumentStats(),
         getDocumentFacets(),
-        listDocuments({ limit: 10, offset: 0 })
+        listDocuments({ limit: 10, offset: 0 }),
+        getGlobalKBStats(timeRange)
       ]);
       if (cl.status === "fulfilled") setColls(cl.value);
       if (ds.status === "fulfilled") setDocStats(ds.value);
       if (f.status === "fulfilled") setFacets(f.value);
       if (docs.status === "fulfilled") setRecentDocs(docs.value.documents);
+      if (kb.status === "fulfilled") setKbStats(kb.value);
     } catch {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [timeRange]);
 
   React.useEffect(() => { load().catch(() => {}); }, [load]);
 
@@ -1643,6 +1649,61 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
           icon={Database}
           color="text-emerald-400"
         />
+      </div>
+
+      {/* Query Analytics */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" /> Company Knowledge Base Queries
+          </h3>
+          <select
+            value={timeRange}
+            onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+            className="h-7 rounded-md border border-border bg-background px-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="1h">Last hour</option>
+            <option value="24h">Last 24h</option>
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <StatCard label="Total Queries" value={kbStats?.totalQueries ?? "—"} icon={MessageSquare} color="text-primary" />
+          <StatCard label="Avg Response" value={kbStats?.avgResponseTime ? `${(kbStats.avgResponseTime / 1000).toFixed(1)}s` : "—"} icon={Clock} color="text-blue-400" />
+          <StatCard label="Avg Contexts" value={kbStats?.avgContextsRetrieved ?? "—"} sub="Chunks retrieved" icon={Layers} color="text-violet-400" />
+        </div>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Most Queried Topics</CardTitle>
+            <CardDescription className="text-xs">Questions users ask about the company knowledge base</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+            ) : !kbStats || kbStats.topQueries.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-4 text-center">No queries yet — users haven&apos;t used Company mode yet</p>
+            ) : (
+              <div className="space-y-2">
+                {kbStats.topQueries.map((q, i) => {
+                  const maxCount = kbStats.topQueries[0]?.count || 1;
+                  return (
+                    <div key={i} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="truncate max-w-[70%] font-medium">{q.query}</span>
+                        <div className="flex items-center gap-2 text-muted-foreground shrink-0">
+                          <span>{q.count}×</span>
+                          <span>{ms(q.avgTime)}</span>
+                        </div>
+                      </div>
+                      <ProgressBar value={q.count} max={maxCount} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">

@@ -249,40 +249,29 @@ export function ChatView() {
     }
 
     try {
-      if (!hasFiles && (mode === "general" || mode === "coanony")) {
+      if (!hasFiles && mode === "general") {
+        // ── General mode: plain AI chat, no knowledge base ──────────────────
         const history: ChatTurn[] = nextMessages
           .slice(0, -1)
           .map((m) => ({ role: m.role, content: m.content }));
 
-        const system =
-          mode === "coanony"
-            ? "You are the Coanony Company Assistant, a helpful internal AI for employees and customers of Coanony. Be concise and professional. If a question requires specific Coanony policy, product, or internal data that isn't provided, say you don't have that information on hand and suggest checking the relevant Coanony system or contacting the team. You are Smachs AI's Coanony assistant — never mention Google, Gemini, or any underlying model; if asked what you are, say you are Smachs AI."
-            : [
-                "You are Smachs AI — a warm, sharp, general-purpose assistant built by Smachs. Your identity is Smachs AI. You are NOT Gemini, NOT Google, NOT Bard, NOT any other model. If asked what you are, who made you, or what model powers you, say you are Smachs AI built by the Smachs team. Never mention Google, Gemini, Bard, or any underlying provider.",
-                "Engage naturally. Answer questions across any topic — coding, writing, math, science, history, current concepts, planning, creative work, casual chat — directly and confidently. Don't over-qualify. Don't preface answers with disclaimers about being an AI. Just answer.",
-                "Only say you don't know when you genuinely don't know. For live data (today's news, current prices, real-time sports scores), explain you don't have live internet access but offer what you can help with instead — don't just refuse.",
-                "Tone: friendly, curious, a little playful when appropriate. Keep replies concise by default but go deeper when the question deserves it. Use markdown (code blocks, lists, headings) when it helps readability.",
-                "When the user asks something casual like 'what are you doing' or 'how are you', respond conversationally and humanly — not with a mechanical self-description."
-              ].join("\n\n");
+        const system = [
+          "You are Smachs AI — a warm, sharp, general-purpose assistant built by Smachs. Your identity is Smachs AI. You are NOT Gemini, NOT Google, NOT Bard, NOT any other model. If asked what you are, who made you, or what model powers you, say you are Smachs AI built by the Smachs team. Never mention Google, Gemini, Bard, or any underlying provider.",
+          "Engage naturally. Answer questions across any topic — coding, writing, math, science, history, current concepts, planning, creative work, casual chat — directly and confidently. Don't over-qualify. Don't preface answers with disclaimers about being an AI. Just answer.",
+          "Only say you don't know when you genuinely don't know. For live data (today's news, current prices, real-time sports scores), explain you don't have live internet access but offer what you can help with instead — don't just refuse.",
+          "Tone: friendly, curious, a little playful when appropriate. Keep replies concise by default but go deeper when the question deserves it. Use markdown (code blocks, lists, headings) when it helps readability.",
+          "When the user asks something casual like 'what are you doing' or 'how are you', respond conversationally and humanly — not with a mechanical self-description."
+        ].join("\n\n");
 
         await streamChat(
           history,
           { system },
           {
-            onChunk: (text) => {
-              pending += text;
-              startTicker();
-            },
-            onComplete: () => {
-              completed = true;
-              startTicker();
-            },
+            onChunk: (text) => { pending += text; startTicker(); },
+            onComplete: () => { completed = true; startTicker(); },
             onError: (msg) => {
               stopTicker();
-              updateAssistantLocal(assistantId, {
-                error: msg,
-                streaming: false
-              });
+              updateAssistantLocal(assistantId, { error: msg, streaming: false });
             }
           },
           controller.signal
@@ -298,17 +287,23 @@ export function ChatView() {
           }
         }
       } else {
-        // Build scope: uploaded files take priority over thread scope
+        // ── Company mode: query global (admin) knowledge base only ───────────
+        // ── Knowledge mode: query user's own documents only ──────────────────
+        // ── Either mode with file uploads: scope to uploaded files ───────────
+
         const scopeOpts: Record<string, unknown> = {};
+
         if (uploadedDocIds.length === 1) {
           scopeOpts.documentId = uploadedDocIds[0];
         } else if (uploadedDocIds.length > 1) {
-          // Group multiple uploaded files into a temporary collection
           const col = await createCollection({
             name: `chat-upload-${Date.now()}`,
             documentIds: uploadedDocIds
           });
           scopeOpts.collectionId = col.collectionId;
+        } else if (mode === "coanony") {
+          // Company mode → only global knowledge base docs
+          scopeOpts.metadataFilter = { isGlobal: true };
         } else if (t.scopedDocument) {
           scopeOpts.documentId = t.scopedDocument.documentId;
         } else if (t.scopedCollection) {

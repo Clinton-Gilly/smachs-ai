@@ -176,5 +176,20 @@ router.post('/cache/clear', async (req, res) => {
   }
 });
 
+/**
+ * Global Knowledge Base query stats
+ * GET /api/analytics/global-kb?timeRange=7d
+ */
+router.get('/global-kb', async (req, res) => {
+  try {
+    const { timeRange = '7d' } = req.query;
+    const data = await analyticsService.getGlobalKnowledgeBaseStats(timeRange);
+    res.json({ success: true, data });
+  } catch (error) {
+    logger.error('Failed to get global KB stats', { error: error.message });
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 module.exports = router;
 

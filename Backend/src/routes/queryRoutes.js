@@ -14,8 +14,9 @@ const logger = require('../utils/logger');
 async function applyCollectionScope(options = {}, userId = null) {
   const merged = { ...(options.metadataFilter || {}) };
 
-  // Scope RAG search to the requesting user's documents
-  if (userId) merged.userId = userId;
+  // isGlobal:true = Company mode → search global KB only, no userId scope.
+  // Otherwise scope to the requesting user's own documents.
+  if (!merged.isGlobal && userId) merged.userId = userId;
 
   if (options && options.collectionId) {
     const ids = await collectionsService.resolveDocumentIds(String(options.collectionId));

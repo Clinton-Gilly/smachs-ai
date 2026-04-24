@@ -248,12 +248,12 @@ class VectorService {
   buildMetadataFilter(metadataFilter) {
     const filter = {};
 
-    // userId: match user's own docs OR global docs
-    if (metadataFilter.userId) {
-      filter.$or = [
-        { 'metadata.userId': metadataFilter.userId },
-        { 'metadata.isGlobal': true }
-      ];
+    // isGlobal:true  → Company mode, search ONLY global/admin docs
+    // userId present → Knowledge mode, search ONLY this user's own docs
+    if (metadataFilter.isGlobal) {
+      filter['metadata.isGlobal'] = true;
+    } else if (metadataFilter.userId) {
+      filter['metadata.userId'] = metadataFilter.userId;
     }
 
     if (metadataFilter.category) {
