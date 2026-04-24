@@ -58,9 +58,13 @@ class GeminiService {
           return embedding;
         } catch (error) {
           lastError = error;
-          if (attempt < retries && (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED'))) {
-            logger.warn(`Embedding generation attempt ${attempt} failed, retrying...`);
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+          const is429 = error?.status === 429 || String(error?.message).includes('429') || String(error?.message).toLowerCase().includes('quota');
+          const isNetwork = error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED');
+          if (attempt < retries && (is429 || isNetwork)) {
+            const retrySeconds = error?.errorDetails?.find?.((d) => d?.retryDelay)?.retryDelay;
+            const wait = is429 ? (retrySeconds ? parseInt(retrySeconds) * 1000 + 1000 : 45000) : 1000 * attempt;
+            logger.warn(`Embedding attempt ${attempt} failed (${is429 ? '429' : 'network'}) — retrying in ${Math.ceil(wait / 1000)}s`);
+            await new Promise(resolve => setTimeout(resolve, wait));
           } else {
             throw error;
           }
@@ -89,30 +93,64 @@ class GeminiService {
   }
 
   /**
-   * Generate embeddings for multiple texts in batch
+   * Generate embeddings for multiple texts.
+   * Processes in small sequential sub-batches to stay within the free-tier
+   * 100 RPM limit, and retries individual requests on 429 with the
+   * retryDelay specified by the API.
    */
   async generateEmbeddings(texts) {
-    try {
-      const model = this.genAI.getGenerativeModel({ model: this.embeddingModel });
-      
-      // Process in batches to avoid rate limits
-      const batchSize = 100;
-      const embeddings = [];
+    const model = this.genAI.getGenerativeModel({ model: this.embeddingModel });
+    const SUB_BATCH = 10;   // requests fired in parallel per sub-batch
+    const DELAY_MS  = 7000; // wait between sub-batches (~8 sub-batches/min < 100 RPM)
+    const MAX_RETRY = 4;
 
-      for (let i = 0; i < texts.length; i += batchSize) {
-        const batch = texts.slice(i, i + batchSize);
-        const batchPromises = batch.map(text => model.embedContent(text));
-        const results = await Promise.all(batchPromises);
-        embeddings.push(...results.map(r => r.embedding.values));
-        
-        logger.info(`Generated embeddings for batch ${i / batchSize + 1}/${Math.ceil(texts.length / batchSize)}`);
+    const embedOne = async (text) => {
+      let delay = 5000;
+      for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+        try {
+          const result = await model.embedContent(text);
+          return result.embedding.values;
+        } catch (err) {
+          const is429 =
+            err?.status === 429 ||
+            String(err?.message).includes('429') ||
+            String(err?.message).toLowerCase().includes('quota');
+          if (is429 && attempt < MAX_RETRY) {
+            // Honour the retryDelay from the API response if present
+            const retrySeconds = err?.errorDetails
+              ?.find((d) => d?.retryDelay)
+              ?.retryDelay;
+            const wait = retrySeconds
+              ? parseInt(retrySeconds) * 1000 + 1000
+              : delay;
+            logger.warn(`Embedding 429 — retrying in ${Math.ceil(wait / 1000)}s (attempt ${attempt + 1}/${MAX_RETRY})`);
+            await new Promise((r) => setTimeout(r, wait));
+            delay = Math.min(delay * 2, 90000);
+            continue;
+          }
+          throw err;
+        }
       }
+    };
 
-      return embeddings;
-    } catch (error) {
-      logger.error('Error generating embeddings:', error);
-      throw error;
+    const embeddings = [];
+    const totalBatches = Math.ceil(texts.length / SUB_BATCH);
+
+    for (let i = 0; i < texts.length; i += SUB_BATCH) {
+      const batch = texts.slice(i, i + SUB_BATCH);
+      const batchNum = Math.floor(i / SUB_BATCH) + 1;
+      logger.info(`Generating embeddings sub-batch ${batchNum}/${totalBatches} (${batch.length} texts)`);
+
+      const results = await Promise.all(batch.map(embedOne));
+      embeddings.push(...results);
+
+      // Pause between sub-batches to stay under RPM limit
+      if (i + SUB_BATCH < texts.length) {
+        await new Promise((r) => setTimeout(r, DELAY_MS));
+      }
     }
+
+    return embeddings;
   }
 
   /**
