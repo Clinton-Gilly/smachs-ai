@@ -1605,12 +1605,39 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
   // Upload state
   const [uploadTab, setUploadTab] = React.useState<"file" | "url" | "text">("file");
   const [uploading, setUploading] = React.useState(false);
+  const [uploadStage, setUploadStage] = React.useState(0);
+  const [uploadFilename, setUploadFilename] = React.useState("");
   const [dragOver, setDragOver] = React.useState(false);
   const [urlInput, setUrlInput] = React.useState("");
   const [textInput, setTextInput] = React.useState("");
   const [textTitle, setTextTitle] = React.useState("");
   const [category, setCategory] = React.useState("");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const stageTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const UPLOAD_STAGES = [
+    { label: "Reading file…",            icon: "📄" },
+    { label: "Splitting into chunks…",   icon: "✂️" },
+    { label: "Generating embeddings…",   icon: "🧠" },
+    { label: "Storing in knowledge base…", icon: "💾" },
+  ];
+
+  const startStageTimer = () => {
+    setUploadStage(0);
+    stageTimerRef.current = setInterval(() => {
+      setUploadStage((s) => (s < UPLOAD_STAGES.length - 1 ? s + 1 : s));
+    }, 6000);
+  };
+
+  const stopStageTimer = () => {
+    if (stageTimerRef.current) {
+      clearInterval(stageTimerRef.current);
+      stageTimerRef.current = null;
+    }
+    setUploadStage(0);
+  };
+
+  React.useEffect(() => () => stopStageTimer(), []);
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -1639,8 +1666,11 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
     const arr = Array.from(files);
     if (!arr.length) return;
     setUploading(true);
+    setUploadFilename(arr.length === 1 ? arr[0].name : `${arr.length} files`);
+    startStageTimer();
     let ok = 0;
     for (const file of arr) {
+      setUploadFilename(file.name);
       try {
         await uploadDocument(file, { category: category || undefined });
         ok++;
@@ -1648,17 +1678,21 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
         push({ kind: "error", text: `${file.name}: ${e.message}` });
       }
     }
+    stopStageTimer();
     if (ok > 0) {
       push({ kind: "success", text: `${ok} file${ok > 1 ? "s" : ""} added to Global Knowledge Base` });
       load();
     }
     setUploading(false);
+    setUploadFilename("");
   };
 
   const handleUrlIngest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!urlInput.trim()) return;
     setUploading(true);
+    setUploadFilename(urlInput.trim());
+    startStageTimer();
     try {
       await ingestUrl(urlInput.trim(), { category: category || undefined });
       push({ kind: "success", text: "URL ingested into Global Knowledge Base" });
@@ -1667,7 +1701,9 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
     } catch (e: any) {
       push({ kind: "error", text: e.message });
     } finally {
+      stopStageTimer();
       setUploading(false);
+      setUploadFilename("");
     }
   };
 
@@ -1675,6 +1711,8 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
     e.preventDefault();
     if (!textInput.trim()) return;
     setUploading(true);
+    setUploadFilename(textTitle || "Text document");
+    startStageTimer();
     try {
       await uploadText(textInput.trim(), { title: textTitle || undefined, category: category || undefined });
       push({ kind: "success", text: "Text added to Global Knowledge Base" });
@@ -1684,7 +1722,9 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
     } catch (e: any) {
       push({ kind: "error", text: e.message });
     } finally {
+      stopStageTimer();
       setUploading(false);
+      setUploadFilename("");
     }
   };
 
@@ -1745,8 +1785,56 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
             />
           </div>
 
+          {/* ── Processing animation overlay ── */}
+          {uploading && (
+            <div className="rounded-xl border border-primary/20 bg-background/80 backdrop-blur px-5 py-6 space-y-4">
+              {/* Filename */}
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="h-8 w-8 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <span className="text-base">{UPLOAD_STAGES[uploadStage].icon}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold truncate">{uploadFilename}</p>
+                  <p className="text-[11px] text-primary font-medium">{UPLOAD_STAGES[uploadStage].label}</p>
+                </div>
+                <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+              </div>
+
+              {/* Shimmer progress bar */}
+              <div className="relative h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div className="absolute inset-y-0 left-0 w-1/2 rounded-full bg-primary/60 animate-[shimmer_1.6s_ease-in-out_infinite]" />
+              </div>
+
+              {/* Step indicators */}
+              <div className="flex items-center justify-between">
+                {UPLOAD_STAGES.map((stage, i) => (
+                  <div key={i} className="flex flex-col items-center gap-1 flex-1">
+                    <div className={cn(
+                      "h-6 w-6 rounded-full flex items-center justify-center text-xs transition-all duration-500",
+                      i < uploadStage  ? "bg-primary text-primary-foreground scale-100" :
+                      i === uploadStage ? "bg-primary/20 text-primary ring-2 ring-primary ring-offset-1 ring-offset-background scale-110 animate-pulse" :
+                                         "bg-muted text-muted-foreground scale-90"
+                    )}>
+                      {i < uploadStage ? "✓" : i + 1}
+                    </div>
+                    <span className={cn(
+                      "text-[9px] text-center leading-tight max-w-[56px] transition-colors duration-500",
+                      i === uploadStage ? "text-primary font-medium" : "text-muted-foreground"
+                    )}>
+                      {stage.label.replace("…", "")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-[10px] text-center text-muted-foreground/60">
+                Large documents may take a minute — embedding in progress…
+              </p>
+            </div>
+          )}
+
           {/* File upload */}
-          {uploadTab === "file" && (
+          {uploadTab === "file" && !uploading && (
             <div
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -1754,27 +1842,21 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
               onClick={() => fileInputRef.current?.click()}
               className={cn(
                 "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 cursor-pointer transition-all",
-                dragOver ? "border-primary bg-primary/10" : "border-border/60 hover:border-primary/50 hover:bg-muted/40"
+                dragOver ? "border-primary bg-primary/10 scale-[1.01]" : "border-border/60 hover:border-primary/50 hover:bg-muted/40"
               )}
             >
               <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.txt,.md,.csv" className="hidden"
                 onChange={(e) => e.target.files && handleFiles(e.target.files)} />
-              {uploading ? (
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              ) : (
-                <>
-                  <Upload className="h-6 w-6 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground text-center">
-                    <span className="text-primary font-medium">Click to upload</span> or drag & drop<br />
-                    PDF, DOCX, TXT, MD, CSV
-                  </p>
-                </>
-              )}
+              <Upload className={cn("h-6 w-6 transition-colors", dragOver ? "text-primary" : "text-muted-foreground")} />
+              <p className="text-xs text-muted-foreground text-center">
+                <span className="text-primary font-medium">Click to upload</span> or drag & drop<br />
+                PDF, DOCX, TXT, MD, CSV
+              </p>
             </div>
           )}
 
           {/* URL ingest */}
-          {uploadTab === "url" && (
+          {uploadTab === "url" && !uploading && (
             <form onSubmit={handleUrlIngest} className="flex gap-2">
               <Input
                 placeholder="https://example.com/policy.html"
@@ -1782,14 +1864,14 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
                 onChange={(e) => setUrlInput(e.target.value)}
                 className="h-8 text-xs flex-1"
               />
-              <Button type="submit" size="sm" className="h-8 text-xs" disabled={uploading || !urlInput.trim()}>
-                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><LinkIcon className="h-3.5 w-3.5 mr-1" />Ingest</>}
+              <Button type="submit" size="sm" className="h-8 text-xs" disabled={!urlInput.trim()}>
+                <LinkIcon className="h-3.5 w-3.5 mr-1" />Ingest
               </Button>
             </form>
           )}
 
           {/* Plain text */}
-          {uploadTab === "text" && (
+          {uploadTab === "text" && !uploading && (
             <form onSubmit={handleTextUpload} className="space-y-2">
               <Input
                 placeholder="Document title (optional)"
@@ -1804,8 +1886,8 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
                 rows={5}
                 className="text-xs resize-none"
               />
-              <Button type="submit" size="sm" className="h-8 text-xs" disabled={uploading || !textInput.trim()}>
-                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add Text"}
+              <Button type="submit" size="sm" className="h-8 text-xs" disabled={!textInput.trim()}>
+                Add Text
               </Button>
             </form>
           )}
