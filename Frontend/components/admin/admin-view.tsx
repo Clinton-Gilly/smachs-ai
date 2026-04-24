@@ -1602,6 +1602,16 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
   const [timeRange, setTimeRange] = React.useState<TimeRange>("7d");
   const [loading, setLoading] = React.useState(true);
 
+  // Upload state
+  const [uploadTab, setUploadTab] = React.useState<"file" | "url" | "text">("file");
+  const [uploading, setUploading] = React.useState(false);
+  const [dragOver, setDragOver] = React.useState(false);
+  const [urlInput, setUrlInput] = React.useState("");
+  const [textInput, setTextInput] = React.useState("");
+  const [textTitle, setTextTitle] = React.useState("");
+  const [category, setCategory] = React.useState("");
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     try {
@@ -1625,17 +1635,182 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
 
   React.useEffect(() => { load().catch(() => {}); }, [load]);
 
+  const handleFiles = async (files: FileList | File[]) => {
+    const arr = Array.from(files);
+    if (!arr.length) return;
+    setUploading(true);
+    let ok = 0;
+    for (const file of arr) {
+      try {
+        await uploadDocument(file, { category: category || undefined });
+        ok++;
+      } catch (e: any) {
+        push({ kind: "error", text: `${file.name}: ${e.message}` });
+      }
+    }
+    if (ok > 0) {
+      push({ kind: "success", text: `${ok} file${ok > 1 ? "s" : ""} added to Global Knowledge Base` });
+      load();
+    }
+    setUploading(false);
+  };
+
+  const handleUrlIngest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!urlInput.trim()) return;
+    setUploading(true);
+    try {
+      await ingestUrl(urlInput.trim(), { category: category || undefined });
+      push({ kind: "success", text: "URL ingested into Global Knowledge Base" });
+      setUrlInput("");
+      load();
+    } catch (e: any) {
+      push({ kind: "error", text: e.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleTextUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!textInput.trim()) return;
+    setUploading(true);
+    try {
+      await uploadText(textInput.trim(), { title: textTitle || undefined, category: category || undefined });
+      push({ kind: "success", text: "Text added to Global Knowledge Base" });
+      setTextInput("");
+      setTextTitle("");
+      load();
+    } catch (e: any) {
+      push({ kind: "error", text: e.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteDoc = async (doc: DocumentRow) => {
+    try {
+      await deleteDocument(doc.documentId);
+      push({ kind: "success", text: `"${doc.filename}" removed` });
+      load();
+    } catch (e: any) {
+      push({ kind: "error", text: e.message });
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-base font-semibold">Global Knowledge Base</h2>
-          <p className="text-xs text-muted-foreground">Overview of all indexed knowledge across the system</p>
+          <p className="text-xs text-muted-foreground">Upload company data — all users can query it in Company mode</p>
         </div>
         <Button variant="outline" size="sm" className="h-8 text-xs" onClick={load} disabled={loading}>
           <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", loading && "animate-spin")} /> Refresh
         </Button>
       </div>
+
+      {/* ── Upload Panel ── */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Upload className="h-4 w-4 text-primary" /> Add to Knowledge Base
+          </CardTitle>
+          <CardDescription className="text-xs">Documents uploaded here are available to all users in Company chat mode</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Tab switcher */}
+          <div className="flex gap-1 rounded-lg bg-muted/60 p-1 w-fit">
+            {(["file", "url", "text"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setUploadTab(t)}
+                className={cn(
+                  "px-3 py-1 rounded-md text-xs font-medium transition-all capitalize",
+                  uploadTab === t ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {t === "file" ? "File" : t === "url" ? "URL" : "Text"}
+              </button>
+            ))}
+          </div>
+
+          {/* Category (shared) */}
+          <div className="flex gap-2 items-center">
+            <Input
+              placeholder="Category (optional)"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="h-7 text-xs max-w-[200px]"
+            />
+          </div>
+
+          {/* File upload */}
+          {uploadTab === "file" && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-8 cursor-pointer transition-all",
+                dragOver ? "border-primary bg-primary/10" : "border-border/60 hover:border-primary/50 hover:bg-muted/40"
+              )}
+            >
+              <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.txt,.md,.csv" className="hidden"
+                onChange={(e) => e.target.files && handleFiles(e.target.files)} />
+              {uploading ? (
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              ) : (
+                <>
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                  <p className="text-xs text-muted-foreground text-center">
+                    <span className="text-primary font-medium">Click to upload</span> or drag & drop<br />
+                    PDF, DOCX, TXT, MD, CSV
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* URL ingest */}
+          {uploadTab === "url" && (
+            <form onSubmit={handleUrlIngest} className="flex gap-2">
+              <Input
+                placeholder="https://example.com/policy.html"
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                className="h-8 text-xs flex-1"
+              />
+              <Button type="submit" size="sm" className="h-8 text-xs" disabled={uploading || !urlInput.trim()}>
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><LinkIcon className="h-3.5 w-3.5 mr-1" />Ingest</>}
+              </Button>
+            </form>
+          )}
+
+          {/* Plain text */}
+          {uploadTab === "text" && (
+            <form onSubmit={handleTextUpload} className="space-y-2">
+              <Input
+                placeholder="Document title (optional)"
+                value={textTitle}
+                onChange={(e) => setTextTitle(e.target.value)}
+                className="h-7 text-xs"
+              />
+              <Textarea
+                placeholder="Paste company policy, procedure, FAQ, or any text…"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                rows={5}
+                className="text-xs resize-none"
+              />
+              <Button type="submit" size="sm" className="h-8 text-xs" disabled={uploading || !textInput.trim()}>
+                {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Add Text"}
+              </Button>
+            </form>
+          )}
+        </CardContent>
+      </Card>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -1811,31 +1986,46 @@ function GlobalKnowledgeBaseTab({ push }: { push: (t: Omit<Toast, "id">) => void
         </CardContent>
       </Card>
 
-      {/* Recent documents */}
+      {/* Global knowledge base documents */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm">Recently Added Documents</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Globe className="h-4 w-4 text-emerald-400" /> Knowledge Base Documents
+          </CardTitle>
+          <CardDescription className="text-xs">All documents available to users in Company mode</CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
           ) : recentDocs.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-4 text-center">No documents yet</p>
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <Upload className="h-8 w-8 text-muted-foreground/30" />
+              <p className="text-xs text-muted-foreground">No documents yet — upload above to get started</p>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {recentDocs.map((doc) => (
-                <div key={doc.documentId} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/40 transition-colors">
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <div key={doc.documentId} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted/40 transition-colors group">
+                  <FileText className="h-4 w-4 shrink-0 text-primary/60" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium truncate">{doc.filename}</p>
                     <p className="text-[10px] text-muted-foreground">
                       {niceFileType(doc)} · {doc.chunks} chunks · {formatBytes(doc.fileSize)}
-                      {doc.category && ` · ${doc.category}`}
+                      {doc.category && <span className="ml-1 text-primary/70">· {doc.category}</span>}
                     </p>
                   </div>
                   <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
                     {fmtDate(doc.uploadDate)}
                   </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive/50 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    title="Remove from knowledge base"
+                    onClick={() => handleDeleteDoc(doc)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
                 </div>
               ))}
             </div>
