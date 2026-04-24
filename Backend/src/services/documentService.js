@@ -60,13 +60,16 @@ class DocumentService {
         metadata: { ...c.metadata, chunkIndex: i }
       }));
 
+      // Filter out empty or whitespace-only chunks
+      chunks = chunks.filter(c => c.content && c.content.trim().length > 10);
+
       if (chunks.length === 0) {
         throw new Error('No extractable text found in document');
       }
 
       // Generate embeddings for all chunks
       logger.info(`Generating embeddings for ${chunks.length} chunks`);
-      const chunkTexts = chunks.map((c) => c.content);
+      const chunkTexts = chunks.map((c) => c.content.trim());
       const embeddings = await geminiService.generateEmbeddings(chunkTexts);
 
       // Prepare chunks for insertion

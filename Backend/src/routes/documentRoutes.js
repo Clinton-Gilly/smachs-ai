@@ -62,7 +62,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     logger.error('Error in document upload:', error);
     res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message || error.toString() || 'Document processing failed'
     });
   }
 });
@@ -87,7 +87,7 @@ router.post('/url', async (req, res) => {
     res.json({ success: true, data: result });
   } catch (error) {
     logger.error('Error ingesting URL:', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, error: error.message || error.toString() || 'URL ingestion failed' });
   }
 });
 

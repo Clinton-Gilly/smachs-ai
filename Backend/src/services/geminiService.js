@@ -105,10 +105,14 @@ class GeminiService {
     const MAX_RETRY = 4;
 
     const embedOne = async (text) => {
+      // Gemini text-embedding-004 max input: 2048 tokens (~8000 chars). Truncate to be safe.
+      const safeText = typeof text === 'string' ? text.slice(0, 8000) : String(text || '').slice(0, 8000);
+      if (!safeText.trim()) throw new Error('Cannot embed empty text');
+
       let delay = 5000;
       for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
         try {
-          const result = await model.embedContent(text);
+          const result = await model.embedContent(safeText);
           return result.embedding.values;
         } catch (err) {
           const is429 =
@@ -128,7 +132,13 @@ class GeminiService {
             delay = Math.min(delay * 2, 90000);
             continue;
           }
-          throw err;
+          logger.error('Embedding failed (non-429):', {
+            status: err?.status,
+            message: err?.message,
+            attempt,
+            textLength: text?.length
+          });
+          throw new Error(err?.message || err?.toString() || `Embedding API error (status ${err?.status || 'unknown'})`);
         }
       }
     };
