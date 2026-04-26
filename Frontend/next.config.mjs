@@ -5,7 +5,8 @@ const nextConfig = {
     ignoreDuringBuilds: true
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5000';
+    const rawUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.BACKEND_URL || 'http://localhost:5000';
+    const backendUrl = rawUrl.trim().replace(/\/api\/?$/, '');
     return [
       {
         source: '/api/:path*',
